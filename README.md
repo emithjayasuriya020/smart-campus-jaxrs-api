@@ -12,41 +12,48 @@ coursework requirements, it uses an in-memory data store without any external da
 dependencies.
 
 ### 2. Technical Analysis & Conceptual Report
-#### 2.1 JAX-RS Lifecycle & Data Integrity
-<p align="justify"> <b>Technical Analysis:</b> In JAX-RS, resource classes (such as RoomResource) are request-scoped by default.
-This means the server instantiates the class for every incoming request and discards it after the response is sent. <br>
-<p align="justify"> <b>Implementation Strategy:</b> Since we are restricted from using external databases, data persistence is managed in a dedicated DataStore class. 
-To prevent data loss during the request-response cycle, all resource collections are stored as static members. To handle concurrent access from multiple sensors or users, I utilized ConcurrentHashMap and CopyOnWriteArrayList. 
-These thread-safe structures ensure referential integrity and prevent race conditions without the performance overhead of manual synchronized blocks.</p>
+## Part 1: Service Architecture
+ 
+- **JAX-RS Lifecycle:** Resources are request-scoped by default (created per request). Static `ConcurrentHashMap`s in a `DataStore` class ensure data persists across requests and prevent race conditions during concurrent access.
+- **HATEOAS Justification:** The `/api/v1` discovery endpoint uses HATEOAS to make the API self-documenting. This reduces client-side hardcoding, allowing the client to discover resource URIs dynamically as the system evolves.
+---
+ 
+## Part 2: Room Management
+ 
+- **Returning IDs vs. Full Objects:** Returning only IDs reduces network bandwidth and payload size. However, returning full objects (as done here) is more developer-friendly because it minimises the number of subsequent API calls the client must make to get details.
+- **DELETE Idempotency:** The `DELETE` implementation is idempotent. The first call removes the room (`204`), and subsequent calls for the same ID return `404`. Since the final state of the server is the same (room is gone), it satisfies the definition of idempotency.
+---
+ 
+## Part 3: Sensor Operations
+ 
+- **`@Consumes` Mismatch:** If a client sends `text/plain` instead of `application/json`, the JAX-RS runtime will automatically return an HTTP `415 Unsupported Media Type` error because the media type does not match the `@Consumes` annotation.
+- **Filtering Approach:** `@QueryParam` (e.g., `?type=CO2`) is used for filtering instead of path variables because query parameters are the semantic standard for refining a collection, whereas path variables are used to identify a specific resource.
+---
+ 
+## Part 4: Sub-Resource Locators
+ 
+- **Complexity Management:** Delegating readings to `SensorReadingResource` using the Locator Pattern (`{sensorId}/readings`) implements Separation of Concerns. This prevents a single resource class from becoming a "God Object" and allows for cleaner code organisation.
+---
+ 
+## Part 5: Error Handling & Observability
+ 
+- **Semantic Choice (422 vs 404):** `422 Unprocessable Entity` is returned when a sensor's `roomId` reference is invalid. This is superior to `404` because `404` implies the endpoint is missing, while `422` indicates the syntax is correct but the business logic/referential integrity is broken.
+- **Logging Filters:** Using a single `LoggingFilter` for request/response logging is better than manual logging because it handles cross-cutting concerns. It ensures consistent logging across the entire API without duplicating code in every method.
+- **Cybersecurity Risk:** Exposing raw stack traces allows attackers to perform reconnaissance, identifying library versions (Jersey 2.x) and internal file paths. The `GlobalExceptionMapper` mitigates this Information Disclosure risk by returning sanitised JSON messages.
 
-#### 2.2 HATEOAS & The Discovery Endpoint
-<p align="justify"> <b>Justification:</b> The discovery endpoint at /api/v1 implements HATEOAS (Hypermedia as the Engine of Application State). 
-By providing a JSON map of resource links (e.g., /rooms, /sensors), the API becomes self-documenting. 
-This is superior to static documentation as it allows client-side developers to discover and navigate the API structure dynamically, reducing coupling between the client and specific URI paths.</p>
-
-#### 2.3 Sub-Resource Locator Pattern
-<p align="justify"> <b>Benefit:</b> The sensor reading history is implemented using the Sub-Resource Locator pattern via the /sensors/{id}/read path. 
-This architectural choice promotes Separation of Concerns. The SensorResource class focuses on sensor metadata and inventory, while the logic for historical time-series data is delegated to SensorReadingResource. 
-This keeps the codebase modular and maintainable as the API complexity grows.</p>
-
-#### 2.4 Semantic Error Handling (422 vs 404)
-<p align="justify"> <b>Justification:</b> When a client attempts to register a sensor to a roomId that does not exist, the API returns a 422 Unprocessable Entity status code. </p>
-<ol> 404 Not Found is avoided here because it implies the endpoint (the URL) does not exist. </ol>
-<ol> 422 is used because the JSON payload is syntactically correct, but it violates business logic constraints (referential integrity). This provides more precise feedback to the developer. </ol>
-
-#### 2.5 Cybersecurity: Technical Information Disclosure
-<p align="justify"> <b>Analysis:</b> A significant security risk in web services is the exposure of raw Java stack traces. These traces reveal internal file structures, class names, and library versions (e.g., Jersey 2.35), which attackers use to identify specific vulnerabilities. <br>
-<p align="justify"> <b>The Safety Net:</b> I implemented a GlobalExceptionMapper<Throwable> which acts as a <b>Global Safety Net</b>. It intercepts all unexpected errors and returns a sanitized JSON body. This ensures that no internal server details are leaked, maintaining the security posture of the campus system.
 
 ### 3. Endpoints Documentation
-| **Method** | **Endpoint**                | **Description**                              |
-| ---------- | --------------------------- | -------------------------------------------- |
-| **GET**    | `/api/v1`                   | Service Discovery & Metadata                 |
-| **GET**    | `/api/v1/rooms`             | Retrieve all campus rooms                    |
-| **POST**   | `/api/v1/rooms`             | Register a new room                          |
-| **DELETE** | `/api/v1/rooms/{id}`        | Remove a room (Fails if sensors are present) |
-| **GET**    | `/api/v1/sensors`           | List sensors (Filterable via `?type=`)       |
-| **POST**   | `/api/v1/sensors/{id}/read` | Append a new sensor reading                  |
+| Method   | Endpoint                        | Description                              |
+|----------|---------------------------------|------------------------------------------|
+| `GET`    | `/api/v1`                       | Discovery & HATEOAS Links                |
+| `GET`    | `/api/v1/rooms`                 | List all rooms                           |
+| `POST`   | `/api/v1/rooms`                 | Create a new room                        |
+| `GET`    | `/api/v1/rooms/{roomId}`        | Get details of one room                  |
+| `DELETE` | `/api/v1/rooms/{roomId}`        | Delete room (only if empty)              |
+| `POST`   | `/api/v1/sensors`               | Register a new sensor                    |
+| `GET`    | `/api/v1/sensors?type=X`        | List sensors (with optional filter)      |
+| `GET`    | `/api/v1/sensors/{id}/readings` | Get reading history                      |
+| `POST`   | `/api/v1/sensors/{id}/readings` | Add reading (fails if `MAINTENANCE`)     |
 
 ### 4. Setup and Execution
  #### 1. <p align="justify"><b>Prerequisites:</b> Ensure you have JDK 17 (or 25) and Maven installed. </b></p>
@@ -63,25 +70,44 @@ curl -X GET http://localhost:8080/api/v1
 #### 2. Create a Room
  
 ```bash
-curl -X POST http://localhost:8080/api/v1/rooms \
-  -H "Content-Type: application/json" \
-  -d '{"id": "L3-01", "name": "Main Lab", "capacity": 50}'
+curl -X POST http://localhost:8080/api/v1/rooms
+  -H "Content-Type: application/json"
+  -d '{"id":"L-1", "name":"Lab 1", "capacity":30}'
+```
+#### 3. Register Sensor
+
+```bash
+curl -X POST http://localhost:8080/api/v1/sensors
+  -H "Content-Type: application/json"
+  -d '{"id":"S-1", "type":"Temp", "roomId":"L-1", "status":"ACTIVE"}'
 ```
 
-#### 3. Test Deletion Conflict — `409 Conflict`
- 
-Assign a sensor to a room, then attempt to delete it:
+#### 4. Add Sensor reading (fails if `MAINTENANCE`)
+
+```bash
+curl -X POST http://localhost:8080/api/v1/sensors/S-1/readings
+  -H "Content-Type: application/json"
+  -d '{"value":25.0}'
+```
+
+#### 5. Get reading history
  
 ```bash
-curl -X DELETE http://localhost:8080/api/v1/rooms/L3-01
+curl -X GET http://localhost:8080/api/v1/sensors/S-1/readings
 ```
- 
-**Expected:** `409 Conflict` with a JSON error message.
 
-#### 4. Test Security Safety Net — `500` with No Stack Trace
+#### 6. List sensors (with optional filter)
  
+```bash
+curl -X GET http://localhost:8080/api/v1/sensors?type=Temp
+```
+
+#### 7. Test 403 Forbidden:
+
+Set sensor status to MAINTENANCE, then try to POST a reading.
+
+#### 8. Test 500 Safety Net:
+
 ```bash
 curl -X GET http://localhost:8080/api/v1/crash
 ```
- 
-**Expected:** `500 Internal Server Error` with a sanitised JSON body and **no stack trace**.

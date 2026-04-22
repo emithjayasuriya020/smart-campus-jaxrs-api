@@ -55,7 +55,7 @@ This keeps the codebase modular and maintainable as the API complexity grows.</p
  #### 4. <p align="justify"><b>Access:</b> The API will be available at http://localhost:8080/api/v1. </b></p>
 
 ### 5. Testing Guide (Sample Commands)
-##### 1. Service Discovery
+#### 1. Service Discovery
 
 ```bash
 curl -X GET http://localhost:8080/api/v1

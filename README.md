@@ -106,8 +106,38 @@ curl -X GET http://localhost:8080/api/v1/sensors?type=Temp
 
 Set sensor status to MAINTENANCE, then try to POST a reading.
 
-#### 8. Test 500 Safety Net:
+```bash
+curl -X POST http://localhost:8080/api/v1/sensors/S-1/readings \
+  -H "Content-Type: application/json" \
+  -d '{"value":30.0}'
+```
+
+#### 8. Test 409 Conflict (Room Deletion Safety)
+
+Attempt to delete room L-1 while sensor S-1 is still assigned to it:
+
+```bash
+curl -X DELETE http://localhost:8080/api/v1/rooms/L-1
+```
+
+Expected: 409 Conflict JSON error body.
+
+#### 9. Test 422 Unprocessable Entity (Invalid Reference)
+
+Attempt to register a sensor to a room ID that does not exist:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/sensors \
+  -H "Content-Type: application/json" \
+  -d '{"id":"S-99","type":"CO2","roomId":"INVALID_ID","status":"ACTIVE"}'
+```
+
+Expected: 422 Unprocessable Entity JSON error body.
+
+#### 10. Test 500 Safety Net (Security Check)
 
 ```bash
 curl -X GET http://localhost:8080/api/v1/crash
 ```
+
+Expected: 500 Internal Server Error with a sanitized JSON message and no stack trace.

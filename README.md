@@ -39,7 +39,7 @@ dependencies.
  
 - **Semantic Choice (422 vs 404):** `422 Unprocessable Entity` is returned when a sensor's `roomId` reference is invalid. This is superior to `404` because `404` implies the endpoint is missing, while `422` indicates the syntax is correct but the business logic/referential integrity is broken.
 - **Logging Filters:** Using a single `LoggingFilter` for request/response logging is better than manual logging because it handles cross-cutting concerns. It ensures consistent logging across the entire API without duplicating code in every method.
-- **Cybersecurity Risk:** Exposing raw stack traces allows attackers to perform reconnaissance, identifying library versions (Jersey 2.x) and internal file paths. The `GlobalExceptionMapper` mitigates this Information Disclosure risk by returning sanitised JSON messages.
+- **Cybersecurity Risk:** Exposing raw stack traces allows attackers to identify frameworks, versions, and internal paths for targeted exploitation, identifying library versions (Jersey 2.x) and internal file paths. The `GlobalExceptionMapper` mitigates this Information Disclosure risk by returning sanitised JSON messages.
 
 
 ### 3. Endpoints Documentation

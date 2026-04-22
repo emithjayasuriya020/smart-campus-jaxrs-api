@@ -1,0 +1,27 @@
+# --- Build Artifacts ---
+target/
+bin/
+*.class
+
+# --- IntelliJ IDEA ---
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# --- Maven ---
+.mvn/
+mvnw
+mvnw.cmd
+
+# --- Logs & OS ---
+*.log
+.DS_Store
+Thumbs.db
+
+# --- Miscellaneous ---
+.vscode/
+.settings/
+.classpath
+.project

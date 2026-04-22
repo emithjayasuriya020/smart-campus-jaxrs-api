@@ -49,10 +49,10 @@ This keeps the codebase modular and maintainable as the API complexity grows.</p
 | **POST**   | `/api/v1/sensors/{id}/read` | Append a new sensor reading                  |
 
 ### 4. Setup and Execution
- ####1. <p align="justify"><b>Prerequisites:</b> Ensure you have JDK 17 (or 25) and Maven installed. </b></p>
- ####2. <p align="justify"><b>Build:</b> Run mvn clean install in the project root. </b></p>
- ####3. <p align="justify"><b>Run:</b> Execute the Main.java class. </b></p>
- ####4. <p align="justify"><b>Access:</b> The API will be available at http://localhost:8080/api/v1. </b></p>
+ #### 1. <p align="justify"><b>Prerequisites:</b> Ensure you have JDK 17 (or 25) and Maven installed. </b></p>
+ #### 2. <p align="justify"><b>Build:</b> Run mvn clean install in the project root. </b></p>
+ #### 3. <p align="justify"><b>Run:</b> Execute the Main.java class. </b></p>
+ #### 4. <p align="justify"><b>Access:</b> The API will be available at http://localhost:8080/api/v1. </b></p>
 
 ### 5. Testing Guide (Sample Commands)
 ##### 1. Service Discovery

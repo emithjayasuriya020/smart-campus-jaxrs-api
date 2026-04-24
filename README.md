@@ -1,5 +1,6 @@
 # Smart Campus: Sensor & Room Management API
 ### Student Name: Emith Jayasuriya
+### Student ID: w2120207/20231293
 ### Institution: Informatics Institute of Technology (IIT) / University of Westminster
 ### Tech Stack: JAX-RS / Jersey, Grizzly Embedded Server, Maven
 
